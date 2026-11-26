@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecosistema Microsoft 365 & Azure — Centro de Control</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        slate: {
+                            850: '#151e2e',
+                            900: '#0f172a',
+                            950: '#090d16',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Personalización sutil de scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+        .card-glow:hover {
+            box-shadow: 0 10px 30px -10px rgba(59, 130, 246, 0.25);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col selection:bg-blue-500/30 selection:text-blue-200">
+
+    <!-- Notificación Toast flotante -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-2.5 bg-slate-800 border border-slate-700 text-slate-100 px-4 py-3 rounded-xl shadow-2xl">
+        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i>
+        <span id="toast-msg" class="text-sm font-medium">Acción completada</span>
+    </div>
+
+    <!-- Header / Barra Superior -->
+    <header class="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                
+                <!-- Identidad / Título -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                            <i data-lucide="layers" class="w-5 h-5 text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                                Ecosistema Microsoft
+                                <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                    Centro de Control
+                                </span>
+                            </h1>
+                            <p class="text-xs text-slate-400">Lanzador unificado de Microsoft 365, Copilot, Power Platform y Azure</p>
+                        </div>
+                    </div>
+
+                    <!-- Botón exportar móvil -->
+                    <button onclick="exportBookmarks()" class="lg:hidden inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-200 transition">
+                        <i data-lucide="bookmark-plus" class="w-4 h-4 text-blue-400"></i>
+                        <span>Marcadores</span>
+                    </button>
+                </div>
+
+                <!-- Buscador + Botón Exportar Desktop -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <div class="relative flex-1 sm:w-80 lg:w-96">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            placeholder="Buscar servicio, función o caso de uso..." 
+                            class="w-full bg-slate-900/90 border border-slate-800 focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/20 rounded-xl pl-10 pr-9 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none transition"
+                        >
+                        <button id="clearSearch" onclick="clearSearchInput()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <button onclick="exportBookmarks()" title="Descargar archivo HTML listo para importar en Chrome, Edge o Brave" class="hidden lg:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium shadow-lg shadow-blue-600/20 transition cursor-pointer">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span>Exportar Marcadores (.html)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Barra de Filtros por Categoría -->
+            <div class="mt-4 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar" id="categoryFilters">
+                <!-- Se genera dinámicamente desde JS -->
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        
+        <!-- Selector Interactivo de Plan Microsoft (Chile) -->
+        <section class="mb-8 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-800/80">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                            <i data-lucide="crown" class="w-3.5 h-3.5"></i>
+                        </span>
+                        <h2 class="text-base sm:text-lg font-bold text-white">Simulador de Plan Microsoft y Beneficios (Chile)</h2>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Selecciona un plan para ver su costo, almacenamiento y lo que entrega en cada herramienta. Precios de microsoft.com/es-cl (nov 2026).</p>
+                </div>
+
+                <!-- Pestañas de Selección de Plan -->
+                <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2" id="planSelector">
+                    <!-- Se renderiza dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Panel Resumen Dinámico del Plan Seleccionado -->
+            <div id="planSummaryPanel" class="mt-5">
+                <!-- Se renderiza dinámicamente -->
+            </div>
+        </section>
+
+        <!-- Contenedor de Categorías y Tarjetas -->
+        <div id="servicesContainer" class="space-y-10">
+            <!-- Renderizado dinámico -->
+        </div>
+
+        <!-- Estado vacío cuando no hay coincidencias -->
+        <div id="emptyState" class="hidden py-16 text-center">
+            <div class="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="search-x" class="w-7 h-7 text-slate-500"></i>
+            </div>
+            <h3 class="text-base font-semibold text-slate-200">No se encontraron servicios</h3>
+            <p class="text-sm text-slate-400 mt-1 max-w-md mx-auto">Intenta buscar con otros términos como "Excel", "Copilot", "SharePoint", "automatizar" o "Azure".</p>
+            <button onclick="resetFilters()" class="mt-4 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium text-white transition">
+                Mostrar todos los servicios
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Footer con instrucciones rápidas de marcadores -->
+    <footer class="border-t border-slate-800/80 bg-slate-950/60 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+            <div class="flex items-center gap-2">
+                <i data-lucide="info" class="w-4 h-4 text-blue-400 shrink-0"></i>
+                <span>Tip: Puedes guardar este archivo HTML en tu PC o subirlo a Drive, o usar <strong>Exportar Marcadores (.html)</strong> e importarlo en <code class="text-slate-300 font-mono">chrome://bookmarks</code>.</span>
+            </div>
+            <div class="text-slate-500">
+                Ecosistema Microsoft 365 & Azure
+            </div>
+        </div>
+    </footer>
+
+    <!-- Lógica de Datos e Interactividad -->
+    <script>
+        // Planes de Microsoft (precios Chile, consultados en microsoft.com/es-cl, nov 2026)
+        const PLANS = {
+            free: {
+                id: 'free',
+                name: 'Cuenta Microsoft Gratuita',
+                shortName: 'Gratuita',
+                badge: 'Estándar',
+                accent: 'slate',
+                price: '$0 CLP/mes',
+                postPromoPrice: 'Sin costo',
+                promoDuration: 'Permanente',
+                storage: '5 GB OneDrive',
+                storageNote: 'Más 15 GB de correo en Outlook.com',
+                familyShare: 'No compartible (individual)',
+                extras: [
+                    'Microsoft Copilot gratuito (chat, imágenes con límite)',
+                    'Word, Excel, PowerPoint y OneNote en la web',
+                    'Outlook.com, Teams gratuito y Microsoft To Do',
+                    'Clipchamp con funciones básicas'
+                ]
+            },
+            personal: {
+                id: 'personal',
+                name: 'Microsoft 365 Personal',
+                shortName: 'M365 Personal',
+                badge: 'Individual',
+                accent: 'sky',
+                price: '$8.490 CLP/mes',
+                postPromoPrice: 'O $84.990 CLP/año',
+                promoDuration: 'Suscripción mensual o anual',
+                storage: '1 TB OneDrive',
+                storageNote: 'Para 1 persona, hasta 5 dispositivos a la vez',
+                familyShare: 'No compartible (1 persona)',
+                extras: [
+                    'Apps de escritorio: Word, Excel, PowerPoint, Outlook y OneNote',
+                    'Copilot en las apps y Copilot Chat con más uso que la versión gratuita',
+                    'Creación de imágenes con IA y ayuda visual con más uso',
+                    'Microsoft Defender y Clipchamp con funciones premium'
+                ]
+            },
+            family: {
+                id: 'family',
+                name: 'Microsoft 365 Familia',
+                shortName: 'M365 Familia',
+                badge: 'Hasta 6 personas',
+                accent: 'emerald',
+                price: '$10.490 CLP/mes',
+                postPromoPrice: 'O $104.990 CLP/año',
+                promoDuration: 'Suscripción mensual o anual',
+                storage: '2 TB compartidos',
+                storageNote: 'Almacenamiento compartido en la nube',
+                familyShare: 'Compartible con 5 personas más (6 en total)',
+                extras: [
+                    'Todo lo de Personal para cada integrante',
+                    'Copilot e IA solo para el titular de la suscripción',
+                    'Apps de escritorio para cada persona del grupo',
+                    'Microsoft Defender para toda la familia'
+                ]
+            },
+            premium: {
+                id: 'premium',
+                name: 'Microsoft 365 Premium',
+                shortName: 'M365 Premium',
+                badge: 'IA ampliada',
+                accent: 'purple',
+                price: '$21.690 CLP/mes',
+                postPromoPrice: 'O $216.990 CLP/año',
+                promoDuration: 'Suscripción mensual o anual',
+                storage: '2 TB en la nube',
+                storageNote: 'Igual que Familia, con IA ampliada',
+                familyShare: 'Compartible con 5 personas más (IA solo para el titular)',
+                extras: [
+                    'Todo lo de Familia',
+                    'Copilot Chat con límites ampliados',
+                    'IA agéntica para investigación y análisis avanzados',
+                    'Uso amplio de creación de imágenes, ayuda visual y audio con IA'
+                ]
+            },
+            student: {
+                id: 'student',
+                name: 'Estudiante (Microsoft 365 Educación + beneficios)',
+                shortName: 'Estudiante',
+                badge: 'Tu cuenta universitaria',
+                accent: 'amber',
+                price: '$0 CLP/mes',
+                postPromoPrice: 'Lo cubre tu institución mientras seas estudiante',
+                promoDuration: 'Mientras dure tu matrícula',
+                storage: 'Según institución',
+                storageNote: 'OneDrive y SharePoint de la cuenta universitaria',
+                familyShare: 'Cuenta institucional individual',
+                extras: [
+                    'Microsoft 365 Educación con apps según la licencia de tu universidad',
+                    'Copilot Chat con protección de datos empresarial',
+                    'Azure for Students: US$100 de crédito sin tarjeta, renovable cada año',
+                    'GitHub Student Developer Pack con GitHub Copilot para estudiantes'
+                ]
+            },
+            business: {
+                id: 'business',
+                name: 'Microsoft 365 Empresa Estándar con Copilot',
+                shortName: 'Empresa + Copilot',
+                badge: 'Trabajo',
+                accent: 'rose',
+                price: 'US$23,50 usuario/mes',
+                postPromoPrice: 'Pago anual, más impuestos',
+                promoDuration: 'Suscripción anual por usuario',
+                storage: '1 TB por usuario',
+                storageNote: 'OneDrive empresarial más sitios de SharePoint',
+                familyShare: 'Licencia por usuario de la empresa',
+                extras: [
+                    'Copilot en Word, Excel, PowerPoint, Outlook, OneNote y Teams',
+                    'Agentes de Microsoft como Researcher y Analyst',
+                    'Creación de agentes con Agent Builder y Copilot Studio',
+                    'Correo con dominio propio, Teams y protección de datos empresarial'
+                ]
+            }
+        };
+
+        let activePlanId = 'student';
+
+        // Grupos de planes para beneficios compartidos (Personal, Familia y Premium = hogar)
+        const PERK_GROUP = { personal: 'hogar', family: 'hogar', premium: 'hogar' };
+        function getPerk(service, planId) {
+            const p = service.planPerks || {};
+            return p[planId] || p[PERK_GROUP[planId]] || p.all || '';
+        }
+
+        // Servicios por categoría
+        const SERVICES = [
+            // 1. IA & Desarrollo
+            {
+                id: 'copilot', name: 'Microsoft Copilot', category: 'IA & Desarrollo',
+                url: 'https://copilot.microsoft.com', icon: 'sparkles', accent: 'sky',
+                description: 'Asistente de IA de Microsoft para chat, investigación, creación de imágenes, voz y análisis de archivos, disponible en web, Windows y móvil.',
+                useCase: 'Consultas rápidas, ideas y borradores del día a día.',
+                planPerks: {
+                    free: 'Versión gratuita con límites de uso y de creación de imágenes.',
+                    hogar: 'Más uso de chat, imágenes y voz que la versión gratuita.',
+                    premium: 'Límites ampliados y funciones avanzadas solo para suscriptores Premium.',
+                    student: 'Con cuenta universitaria: Copilot Chat con protección de datos.',
+                    business: 'Copilot Chat con protección de datos y acceso a tus archivos de trabajo.'
+                }
+            },
+            {
+                id: 'm365-copilot', name: 'Microsoft 365 Copilot (app)', category: 'IA & Desarrollo',
+                url: 'https://m365.cloud.microsoft', icon: 'layout-grid', accent: 'sky',
+                description: 'Inicio unificado de Microsoft 365 (antes Office): Copilot Chat, archivos recientes, Pages, Notebooks y acceso a todas las apps.',
+                useCase: 'Punto de partida para trabajar con documentos y Copilot.',
+                planPerks: {
+                    free: 'Apps web y archivos; Copilot Chat no incluido sin suscripción.',
+                    hogar: 'Copilot Chat dentro de la app para el titular de la suscripción.',
+                    student: 'Acceso a las apps y archivos de tu cuenta universitaria.',
+                    business: 'Copilot con Work IQ: cruza correo, reuniones y archivos de trabajo.'
+                }
+            },
+            {
+                id: 'copilot-studio', name: 'Copilot Studio', category: 'IA & Desarrollo',
+                url: 'https://copilotstudio.microsoft.com', icon: 'bot', accent: 'sky',
+                description: 'Plataforma low-code para crear agentes de IA con conocimiento propio, acciones, flujos de Power Automate y publicación en Teams o web.',
+                useCase: 'Crear agentes que respondan con documentos internos.',
+                planPerks: {
+                    all: 'Requiere cuenta de trabajo o estudiante; prueba gratuita disponible.',
+                    business: 'Creación de agentes con Agent Builder y Copilot Studio incluida en el plan.'
+                }
+            },
+            {
+                id: 'foundry', name: 'Microsoft Foundry', category: 'IA & Desarrollo',
+                url: 'https://ai.azure.com', icon: 'flask-conical', accent: 'sky',
+                description: 'Plataforma de Azure (antes Azure AI Foundry) para probar modelos de OpenAI y otros proveedores, crear agentes, evaluar y desplegar apps de IA.',
+                useCase: 'Llevar prototipos de IA a producción con modelos de Azure.',
+                planPerks: {
+                    all: 'Pago por uso en Azure; necesitas una suscripción de Azure.',
+                    student: 'Puedes usar el crédito de Azure for Students (US$100).'
+                }
+            },
+            {
+                id: 'github-copilot', name: 'GitHub Copilot', category: 'IA & Desarrollo',
+                url: 'https://github.com/features/copilot', icon: 'git-pull-request', accent: 'sky',
+                description: 'Asistente de programación en VS Code, Visual Studio, la terminal y GitHub: autocompletado, chat, agente de código y revisión de Pull Requests.',
+                useCase: 'Programar y revisar código con IA.',
+                planPerks: {
+                    all: 'Plan gratuito con límite mensual; planes Pro de pago.',
+                    student: 'Plan para estudiantes verificado con GitHub Education.',
+                    business: 'Licencia aparte (GitHub Copilot Business); no viene en Microsoft 365.'
+                }
+            },
+            {
+                id: 'vscode', name: 'Visual Studio Code', category: 'IA & Desarrollo',
+                url: 'https://code.visualstudio.com/download', isDownload: true, icon: 'code-2', accent: 'sky',
+                description: 'Editor de código gratuito para Windows, macOS y Linux, con extensiones para Python, Django, SQL, Git y GitHub Copilot integrado.',
+                useCase: 'Editor principal para tus proyectos HTML, Python y Django.',
+                planPerks: { all: 'Gratuito para todos; Copilot según tu plan de GitHub.' }
+            },
+            {
+                id: 'visual-studio', name: 'Visual Studio', category: 'IA & Desarrollo',
+                url: 'https://visualstudio.microsoft.com/downloads/', isDownload: true, icon: 'square-code', accent: 'sky',
+                description: 'IDE completo para .NET, C#, C++ y apps de escritorio en Windows. La edición Community es gratuita para estudiantes y uso individual.',
+                useCase: 'Desarrollo .NET y aplicaciones de Windows.',
+                planPerks: { all: 'Edición Community gratuita; ediciones Professional y Enterprise de pago.' }
+            },
+
+            // 2. Datos & Análisis
+            {
+                id: 'excel', name: 'Excel', category: 'Datos & Análisis',
+                url: 'https://www.office.com/launch/excel', icon: 'sheet', accent: 'emerald',
+                description: 'Hojas de cálculo con Power Query, tablas dinámicas, Python en Excel y Copilot para fórmulas, análisis y gráficos.',
+                useCase: 'Análisis de ventas, stock y limpieza de datos.',
+                planPerks: {
+                    free: 'Excel en la web, sin Copilot.',
+                    hogar: 'Excel de escritorio completo con Copilot para el titular.',
+                    student: 'Excel según la licencia de tu universidad.',
+                    business: 'Copilot en Excel y agente Analyst para análisis avanzados.'
+                }
+            },
+            {
+                id: 'powerbi', name: 'Power BI (servicio web)', category: 'Datos & Análisis',
+                url: 'https://app.powerbi.com', icon: 'bar-chart-3', accent: 'emerald',
+                description: 'Publica y comparte dashboards e informes interactivos, con actualización programada de datos y Copilot para crear visuales.',
+                useCase: 'Compartir tableros de gestión con tu equipo.',
+                planPerks: {
+                    all: 'Requiere cuenta de trabajo o estudiante; publicar y compartir pide licencia Pro.',
+                    student: 'Acceso con cuenta universitaria según la licencia de tu institución.'
+                }
+            },
+            {
+                id: 'powerbi-desktop', name: 'Power BI Desktop', category: 'Datos & Análisis',
+                url: 'https://powerbi.microsoft.com/desktop', isDownload: true, icon: 'monitor-dot', accent: 'emerald',
+                description: 'Aplicación de escritorio gratuita para Windows: conecta datos, transforma con Power Query, modela con DAX y diseña informes.',
+                useCase: 'Construir modelos e informes antes de publicarlos.',
+                planPerks: { all: 'Gratuito para todos; publicar en la web requiere Power BI Pro.' }
+            },
+            {
+                id: 'fabric', name: 'Microsoft Fabric', category: 'Datos & Análisis',
+                url: 'https://app.fabric.microsoft.com', icon: 'layers', accent: 'emerald',
+                description: 'Plataforma de datos unificada: lakehouse, almacén de datos, pipelines, notebooks y Power BI en un solo lugar.',
+                useCase: 'Centralizar datos de varias fuentes para análisis.',
+                planPerks: {
+                    all: 'Prueba gratuita; uso continuo con capacidad de Fabric de pago.',
+                    student: 'Prueba gratuita con tu cuenta universitaria.'
+                }
+            },
+            {
+                id: 'learn', name: 'Microsoft Learn', category: 'Datos & Análisis',
+                url: 'https://learn.microsoft.com', icon: 'graduation-cap', accent: 'emerald',
+                description: 'Documentación oficial, rutas de aprendizaje gratuitas, laboratorios y certificaciones de Azure, Power Platform, datos e IA.',
+                useCase: 'Estudiar y certificarte en Power BI, Azure o IA.',
+                planPerks: {
+                    all: 'Contenido gratuito; los exámenes de certificación son de pago.',
+                    student: 'Rutas para estudiantes y descuentos en algunas certificaciones.'
+                }
+            },
+
+            // 3. Diseño & Multimedia
+            {
+                id: 'clipchamp', name: 'Clipchamp', category: 'Diseño & Multimedia',
+                url: 'https://app.clipchamp.com', icon: 'clapperboard', accent: 'purple',
+                description: 'Editor de video en el navegador con plantillas, subtítulos automáticos, voz en off con IA y exportación en alta calidad.',
+                useCase: 'Videos explicativos, demos y capacitaciones.',
+                planPerks: {
+                    free: 'Funciones básicas y exportación en 1080p.',
+                    hogar: 'Filtros, efectos y recursos premium incluidos.',
+                    student: 'Clipchamp para cuentas educativas según tu institución.',
+                    business: 'Clipchamp para trabajo incluido en planes empresariales.'
+                }
+            },
+            {
+                id: 'designer', name: 'Microsoft Designer', category: 'Diseño & Multimedia',
+                url: 'https://designer.microsoft.com', icon: 'palette', accent: 'purple',
+                description: 'Diseño gráfico con IA para imágenes, publicaciones y banners. Sus funciones también se integraron en la app Microsoft 365 Copilot y en Fotos.',
+                useCase: 'Piezas gráficas rápidas para redes y presentaciones.',
+                planPerks: {
+                    free: 'Uso gratuito con límite de créditos de IA.',
+                    hogar: 'Más generaciones con IA para el titular.',
+                    all: 'Disponible también dentro de la app Microsoft 365 Copilot.'
+                }
+            },
+            {
+                id: 'powerpoint', name: 'PowerPoint', category: 'Diseño & Multimedia',
+                url: 'https://www.office.com/launch/powerpoint', icon: 'presentation', accent: 'purple',
+                description: 'Presentaciones con sugerencias de diseño y Copilot para crear diapositivas desde un documento o un prompt.',
+                useCase: 'Presentaciones de resultados y propuestas.',
+                planPerks: {
+                    free: 'PowerPoint en la web, sin Copilot.',
+                    hogar: 'PowerPoint de escritorio con Copilot para el titular.',
+                    student: 'PowerPoint según la licencia de tu universidad.',
+                    business: 'Copilot crea presentaciones a partir de tus archivos de trabajo.'
+                }
+            },
+
+            // 4. Productividad 365
+            {
+                id: 'word', name: 'Word', category: 'Productividad 365',
+                url: 'https://www.office.com/launch/word', icon: 'file-text', accent: 'indigo',
+                description: 'Procesador de textos con coautoría en tiempo real y Copilot para redactar, resumir y reescribir documentos.',
+                useCase: 'Informes, manuales y procedimientos.',
+                planPerks: {
+                    free: 'Word en la web, sin Copilot.',
+                    hogar: 'Word de escritorio con Copilot para el titular.',
+                    student: 'Word según la licencia de tu universidad.',
+                    business: 'Copilot redacta usando correos, reuniones y archivos de trabajo.'
+                }
+            },
+            {
+                id: 'outlook', name: 'Outlook', category: 'Productividad 365',
+                url: 'https://outlook.com', icon: 'mail', accent: 'indigo',
+                description: 'Correo, calendario y contactos en un solo lugar, con resúmenes de hilos y borradores asistidos por Copilot.',
+                useCase: 'Gestionar correo y agenda.',
+                planPerks: {
+                    free: 'Outlook.com con 15 GB de correo.',
+                    hogar: 'Correo sin anuncios y Copilot para el titular.',
+                    student: 'Correo institucional de tu universidad.',
+                    business: 'Correo con dominio propio y Copilot en Outlook.'
+                }
+            },
+            {
+                id: 'onedrive', name: 'OneDrive', category: 'Productividad 365',
+                url: 'https://www.office.com/launch/onedrive', icon: 'cloud', accent: 'indigo',
+                description: 'Almacenamiento en la nube con sincronización en Windows, archivos bajo demanda y respaldo de carpetas.',
+                useCase: 'Respaldo y acceso a tus archivos desde cualquier equipo.',
+                planPerks: {
+                    free: '5 GB gratuitos.',
+                    personal: '1 TB para una persona.',
+                    family: '2 TB compartidos entre hasta 6 personas.',
+                    premium: '2 TB en la nube.',
+                    student: 'Espacio definido por tu universidad.',
+                    business: '1 TB por usuario.'
+                }
+            },
+            {
+                id: 'onenote', name: 'OneNote', category: 'Productividad 365',
+                url: 'https://www.onenote.com', icon: 'notebook-pen', accent: 'indigo',
+                description: 'Cuadernos digitales para apuntes, capturas, dibujos y notas de reuniones, sincronizados entre dispositivos.',
+                useCase: 'Apuntes de estudio y bitácoras de proyecto.',
+                planPerks: {
+                    all: 'Gratuito para todos.',
+                    hogar: 'Copilot en OneNote para el titular.',
+                    business: 'Copilot en OneNote incluido.'
+                }
+            },
+            {
+                id: 'teams', name: 'Microsoft Teams', category: 'Productividad 365',
+                url: 'https://teams.microsoft.com', icon: 'users', accent: 'indigo',
+                description: 'Chat, reuniones, llamadas y canales de equipo con archivos compartidos e integración con las apps de Microsoft 365.',
+                useCase: 'Reuniones y coordinación de equipos.',
+                planPerks: {
+                    free: 'Reuniones grupales con límite de tiempo.',
+                    hogar: 'Reuniones de hasta 30 horas con hasta 300 personas.',
+                    student: 'Teams de tu universidad para clases y trabajos.',
+                    business: 'Teams completo con Copilot y Facilitator en reuniones.'
+                }
+            },
+            {
+                id: 'loop', name: 'Microsoft Loop', category: 'Productividad 365',
+                url: 'https://loop.cloud.microsoft', icon: 'infinity', accent: 'indigo',
+                description: 'Espacios colaborativos con páginas y componentes que se sincronizan en Teams, Outlook y Word.',
+                useCase: 'Planificar proyectos en equipo en un espacio vivo.',
+                planPerks: {
+                    all: 'Disponible con cuenta personal o de trabajo según la configuración.',
+                    business: 'Espacios de Loop y Copilot Pages para colaborar.'
+                }
+            },
+            {
+                id: 'planner', name: 'Planner', category: 'Productividad 365',
+                url: 'https://planner.cloud.microsoft', icon: 'kanban-square', accent: 'indigo',
+                description: 'Gestión de tareas y proyectos con tableros, fechas, responsables y vistas de calendario.',
+                useCase: 'Seguimiento de tareas de un proyecto.',
+                planPerks: {
+                    all: 'Requiere cuenta de trabajo o estudiante.',
+                    free: 'Con cuenta personal usa Microsoft To Do.'
+                }
+            },
+            {
+                id: 'todo', name: 'Microsoft To Do', category: 'Productividad 365',
+                url: 'https://to-do.office.com', icon: 'list-checks', accent: 'indigo',
+                description: 'Listas de tareas personales sincronizadas con Outlook, con recordatorios y vista Mi día.',
+                useCase: 'Pendientes personales del día.',
+                planPerks: { all: 'Gratuito para todos.' }
+            },
+            {
+                id: 'forms', name: 'Microsoft Forms', category: 'Productividad 365',
+                url: 'https://forms.office.com', icon: 'clipboard-list', accent: 'indigo',
+                description: 'Formularios, encuestas y cuestionarios con resultados en Excel y sugerencias con Copilot.',
+                useCase: 'Levantar información y encuestas internas.',
+                planPerks: {
+                    all: 'Gratuito con cuenta Microsoft.',
+                    business: 'Respuestas directo a Excel en SharePoint y flujos con Power Automate.'
+                }
+            },
+
+            // 5. Portales & Automatización
+            {
+                id: 'sharepoint', name: 'SharePoint', category: 'Portales & Automatización',
+                url: 'https://www.office.com/launch/sharepoint', icon: 'globe', accent: 'amber',
+                description: 'Intranets, sitios de equipo y bibliotecas de documentos con permisos, versiones y metadatos.',
+                useCase: 'Portal interno y repositorio documental del área.',
+                planPerks: {
+                    all: 'Requiere cuenta de trabajo o estudiante.',
+                    student: 'Sitios de SharePoint de tu universidad para proyectos.',
+                    business: 'Sitios de equipo y Copilot sobre el contenido de SharePoint.'
+                }
+            },
+            {
+                id: 'lists', name: 'Microsoft Lists', category: 'Portales & Automatización',
+                url: 'https://www.office.com/launch/lists', icon: 'table', accent: 'amber',
+                description: 'Listas tipo base de datos ligera para registrar solicitudes, inventarios o seguimientos, con vistas y reglas.',
+                useCase: 'Registro de solicitudes y seguimiento operativo.',
+                planPerks: {
+                    all: 'Uso completo con cuenta de trabajo o estudiante.',
+                    free: 'Versión limitada con cuenta personal.'
+                }
+            },
+            {
+                id: 'power-automate', name: 'Power Automate', category: 'Portales & Automatización',
+                url: 'https://make.powerautomate.com', icon: 'workflow', accent: 'amber',
+                description: 'Flujos automáticos entre Outlook, Excel, SharePoint, Teams y cientos de conectores, más automatización de escritorio (RPA).',
+                useCase: 'Automatizar correos, aprobaciones y traspaso de datos.',
+                planPerks: {
+                    all: 'Conectores estándar con cuenta de trabajo o estudiante.',
+                    free: 'Power Automate para escritorio gratuito en Windows.',
+                    business: 'Conectores estándar incluidos; premium con licencia aparte.'
+                }
+            },
+            {
+                id: 'power-apps', name: 'Power Apps', category: 'Portales & Automatización',
+                url: 'https://make.powerapps.com', icon: 'app-window', accent: 'amber',
+                description: 'Crea aplicaciones low-code sobre SharePoint, Excel o Dataverse, con Copilot para generar pantallas desde texto.',
+                useCase: 'Apps internas de registro y consulta.',
+                planPerks: {
+                    all: 'Apps con datos de Microsoft 365 usando cuenta de trabajo o estudiante.',
+                    business: 'Apps sobre SharePoint y Excel incluidas; Dataverse con licencia aparte.'
+                }
+            },
+            {
+                id: 'power-pages', name: 'Power Pages', category: 'Portales & Automatización',
+                url: 'https://make.powerpages.microsoft.com', icon: 'panels-top-left', accent: 'amber',
+                description: 'Sitios web empresariales low-code conectados a Dataverse, con formularios, inicio de sesión y permisos.',
+                useCase: 'Portales para clientes o proveedores externos.',
+                planPerks: { all: 'Prueba gratuita; uso en producción con licencia de pago.' }
+            },
+            {
+                id: 'bookings', name: 'Microsoft Bookings', category: 'Portales & Automatización',
+                url: 'https://outlook.office.com/bookings', icon: 'calendar-check', accent: 'amber',
+                description: 'Página de reservas de citas integrada con el calendario de Outlook y Teams.',
+                useCase: 'Agendar reuniones con clientes sin ir y venir de correos.',
+                planPerks: {
+                    all: 'Requiere cuenta de trabajo.',
+                    business: 'Incluido en Empresa Estándar.'
+                }
+            },
+
+            // 6. Infraestructura & Nube
+            {
+                id: 'azure-portal', name: 'Azure Portal', category: 'Infraestructura & Nube',
+                url: 'https://portal.azure.com', icon: 'server', accent: 'rose',
+                description: 'Consola para crear y administrar servicios de Azure: App Service, Azure SQL, Functions, Storage y más.',
+                useCase: 'Publicar backends Django y bases de datos SQL.',
+                planPerks: {
+                    all: 'Pago por uso; cuenta gratuita con servicios gratis por 12 meses.',
+                    student: 'Azure for Students: US$100 de crédito sin tarjeta.'
+                }
+            },
+            {
+                id: 'azure-students', name: 'Azure for Students', category: 'Infraestructura & Nube',
+                url: 'https://azure.microsoft.com/free/students', icon: 'graduation-cap', accent: 'rose',
+                description: 'Beneficio para estudiantes verificados: crédito de Azure y servicios gratuitos, sin tarjeta de crédito y renovable cada año.',
+                useCase: 'Probar Azure, Foundry y bases de datos sin costo.',
+                planPerks: {
+                    all: 'Solo para estudiantes verificados.',
+                    student: 'US$100 de crédito más servicios gratuitos; se renueva mientras seas estudiante.'
+                }
+            },
+            {
+                id: 'azure-devops', name: 'Azure DevOps', category: 'Infraestructura & Nube',
+                url: 'https://dev.azure.com', icon: 'git-branch', accent: 'rose',
+                description: 'Repositorios Git, tableros ágiles, pipelines de CI/CD y planes de prueba para equipos.',
+                useCase: 'Gestionar desarrollo y despliegues en equipo.',
+                planPerks: { all: 'Gratuito hasta 5 usuarios básicos por organización.' }
+            },
+            {
+                id: 'github', name: 'GitHub', category: 'Infraestructura & Nube',
+                url: 'https://github.com', icon: 'git-fork', accent: 'rose',
+                description: 'Repositorios, GitHub Pages, Actions, Codespaces e Issues. Es de Microsoft y donde publicas tus páginas.',
+                useCase: 'Versionar proyectos y publicar sitios con GitHub Pages.',
+                planPerks: {
+                    all: 'Plan gratuito con repositorios ilimitados y GitHub Pages.',
+                    student: 'Student Developer Pack con herramientas y créditos de socios.'
+                }
+            },
+            {
+                id: 'm365-admin', name: 'Centro de administración M365', category: 'Infraestructura & Nube',
+                url: 'https://admin.microsoft.com', icon: 'shield-check', accent: 'rose',
+                description: 'Administración de usuarios, licencias, dominios, seguridad y facturación de una organización Microsoft 365.',
+                useCase: 'Gestionar cuentas y licencias de una empresa.',
+                planPerks: {
+                    all: 'Solo para administradores de una organización.',
+                    business: 'Incluido para el administrador del plan.'
+                }
+            },
+            {
+                id: 'ms-account', name: 'Cuenta Microsoft', category: 'Infraestructura & Nube',
+                url: 'https://account.microsoft.com', icon: 'user-cog', accent: 'rose',
+                description: 'Panel de tu cuenta personal: suscripciones, almacenamiento, grupo familiar, seguridad y dispositivos.',
+                useCase: 'Revisar tu plan, pagos y espacio usado.',
+                planPerks: {
+                    free: 'Gestiona tus 5 GB y seguridad de la cuenta.',
+                    hogar: 'Gestiona tu suscripción, almacenamiento y grupo familiar.',
+                    student: 'La cuenta universitaria se gestiona aparte, con tu institución.',
+                    business: 'La cuenta de trabajo la administra tu empresa.'
+                }
+            },
+
+            // 7. Ecosistema Web & Marketing
+            {
+                id: 'bing-webmaster', name: 'Bing Webmaster Tools', category: 'Ecosistema Web & Marketing',
+                url: 'https://www.bing.com/webmasters', icon: 'scan-search', accent: 'cyan',
+                description: 'Muestra cómo ve Bing tu sitio: indexación, búsquedas, errores y SEO. Bing también alimenta las respuestas de Copilot.',
+                useCase: 'Que tus páginas aparezcan en Bing y en Copilot.',
+                planPerks: { all: '100% gratuito; no depende de tu plan.' }
+            },
+            {
+                id: 'ms-advertising', name: 'Microsoft Advertising', category: 'Ecosistema Web & Marketing',
+                url: 'https://ads.microsoft.com', icon: 'megaphone', accent: 'cyan',
+                description: 'Anuncios en Bing, Copilot, MSN, Outlook y sitios asociados, con importación directa de campañas de Google Ads.',
+                useCase: 'Ampliar campañas a la red de búsqueda de Microsoft.',
+                planPerks: { all: 'Cuenta gratuita; pagas solo la inversión en anuncios.' }
+            },
+            {
+                id: 'clarity', name: 'Microsoft Clarity', category: 'Ecosistema Web & Marketing',
+                url: 'https://clarity.microsoft.com', icon: 'mouse-pointer-click', accent: 'cyan',
+                description: 'Analítica de comportamiento gratuita: grabaciones de sesiones, mapas de calor y resúmenes con Copilot.',
+                useCase: 'Ver cómo navegan los usuarios en tus páginas.',
+                planPerks: { all: '100% gratuito; no depende de tu plan.' }
+            },
+            {
+                id: 'linkedin', name: 'LinkedIn', category: 'Ecosistema Web & Marketing',
+                url: 'https://www.linkedin.com', icon: 'briefcase-business', accent: 'cyan',
+                description: 'Red profesional de Microsoft para perfil, portafolio, publicaciones, empleo y anuncios B2B.',
+                useCase: 'Mostrar tu portafolio y generar contactos.',
+                planPerks: { all: 'Gratuito; LinkedIn Premium y anuncios son de pago aparte.' }
+            },
+            {
+                id: 'dynamics', name: 'Dynamics 365', category: 'Ecosistema Web & Marketing',
+                url: 'https://dynamics.microsoft.com', icon: 'handshake', accent: 'cyan',
+                description: 'Suite de CRM y ERP: ventas, servicio al cliente, marketing, finanzas y operaciones, con Copilot y agentes.',
+                useCase: 'Referente de CRM para comparar con tus maquetas.',
+                planPerks: {
+                    all: 'Prueba gratuita; licencias empresariales de pago.',
+                    business: 'Licencia aparte; se integra con Teams, Outlook y Power Platform.'
+                }
+            }
+        ];
+
+        const CATEGORIES = [
+            { id: 'all', label: 'Todos los servicios', icon: 'layout-grid' },
+            { id: 'IA & Desarrollo', label: 'IA & Desarrollo', icon: 'cpu' },
+            { id: 'Datos & Análisis', label: 'Datos & Análisis', icon: 'database' },
+            { id: 'Diseño & Multimedia', label: 'Diseño & Multimedia', icon: 'palette' },
+            { id: 'Productividad 365', label: 'Productividad 365', icon: 'briefcase' },
+            { id: 'Portales & Automatización', label: 'Portales & Automatización', icon: 'folder-kanban' },
+            { id: 'Infraestructura & Nube', label: 'Infraestructura & Nube', icon: 'server' },
+            { id: 'Ecosistema Web & Marketing', label: 'Ecosistema Web & Marketing', icon: 'network' }
+        ];
+
+        // Mapa de estilos por color de acento
+        const ACCENT_STYLES = {
+            slate: {
+                badge: 'bg-slate-500/10 text-slate-300 border-slate-500/30',
+                iconBg: 'bg-slate-500/10 text-slate-300 border-slate-500/30',
+                btn: 'bg-slate-700 hover:bg-slate-600 text-white',
+                headerDot: 'bg-slate-400',
+                tabActive: 'bg-slate-800 border-slate-500 text-white shadow-lg'
+            },
+            blue: {
+                badge: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                iconBg: 'bg-blue-500/10 text-blue-400 border-blue-500/20 group-hover:bg-blue-500/20',
+                btn: 'bg-blue-600/90 hover:bg-blue-500 text-white shadow-blue-900/20',
+                headerDot: 'bg-blue-500',
+                tabActive: 'bg-blue-600/20 border-blue-500 text-white shadow-lg shadow-blue-900/20'
+            },
+            emerald: {
+                badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                iconBg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 group-hover:bg-emerald-500/20',
+                btn: 'bg-emerald-600/90 hover:bg-emerald-500 text-white shadow-emerald-900/20',
+                headerDot: 'bg-emerald-500',
+                tabActive: 'bg-emerald-600/20 border-emerald-500 text-white shadow-lg shadow-emerald-900/20'
+            },
+            purple: {
+                badge: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+                iconBg: 'bg-purple-500/10 text-purple-400 border-purple-500/20 group-hover:bg-purple-500/20',
+                btn: 'bg-purple-600/90 hover:bg-purple-500 text-white shadow-purple-900/20',
+                headerDot: 'bg-purple-500',
+                tabActive: 'bg-purple-600/20 border-purple-500 text-white shadow-lg shadow-purple-900/20'
+            },
+            amber: {
+                badge: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                iconBg: 'bg-amber-500/10 text-amber-400 border-amber-500/20 group-hover:bg-amber-500/20',
+                btn: 'bg-amber-600/90 hover:bg-amber-500 text-white shadow-amber-900/20',
+                headerDot: 'bg-amber-500',
+                tabActive: 'bg-amber-600/20 border-amber-500 text-white shadow-lg shadow-amber-900/20'
+            },
+            rose: {
+                badge: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+                iconBg: 'bg-rose-500/10 text-rose-400 border-rose-500/20 group-hover:bg-rose-500/20',
+                btn: 'bg-rose-600/90 hover:bg-rose-500 text-white shadow-rose-900/20',
+                headerDot: 'bg-rose-500',
+                tabActive: 'bg-rose-600/20 border-rose-500 text-white shadow-lg shadow-rose-900/20'
+            },
+            sky: {
+                badge: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
+                iconBg: 'bg-sky-500/10 text-sky-400 border-sky-500/20 group-hover:bg-sky-500/20',
+                btn: 'bg-sky-600/90 hover:bg-sky-500 text-white shadow-sky-900/20',
+                headerDot: 'bg-sky-500',
+                tabActive: 'bg-sky-600/20 border-sky-500 text-white shadow-lg shadow-sky-900/20'
+            },
+            indigo: {
+                badge: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+                iconBg: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 group-hover:bg-indigo-500/20',
+                btn: 'bg-indigo-600/90 hover:bg-indigo-500 text-white shadow-indigo-900/20',
+                headerDot: 'bg-indigo-500',
+                tabActive: 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-900/20'
+            },
+            cyan: {
+                badge: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+                iconBg: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20 group-hover:bg-cyan-500/20',
+                btn: 'bg-cyan-600/90 hover:bg-cyan-500 text-white shadow-cyan-900/20',
+                headerDot: 'bg-cyan-500',
+                tabActive: 'bg-cyan-600/20 border-cyan-500 text-white shadow-lg shadow-cyan-900/20'
+            }
+        };
+
+        let activeCategory = 'all';
+        let searchQuery = '';
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPlanSelector();
+            renderPlanSummary();
+            renderCategoryFilters();
+            renderServices();
+
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value.trim().toLowerCase();
+                document.getElementById('clearSearch').classList.toggle('hidden', searchQuery === '');
+                renderServices();
+            });
+        });
+
+        // Renderizar botones de selección de plan
+        function renderPlanSelector() {
+            const container = document.getElementById('planSelector');
+            container.innerHTML = Object.values(PLANS).map(plan => {
+                const isSelected = activePlanId === plan.id;
+                const style = ACCENT_STYLES[plan.accent];
+                return `
+                    <button
+                        onclick="selectPlan('${plan.id}')"
+                        class="px-3.5 py-2 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                            isSelected
+                            ? style.tabActive
+                            : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                        }"
+                    >
+                        <div class="flex items-center justify-between gap-2 w-full">
+                            <span class="text-xs font-semibold">${plan.shortName}</span>
+                            ${isSelected ? `<span class="w-2 h-2 rounded-full ${style.headerDot}"></span>` : ''}
+                        </div>
+                        <span class="text-[11px] font-mono mt-0.5 ${isSelected ? 'text-slate-200' : 'text-slate-500'}">${plan.storage.split(' ')[0]} ${plan.storage.split(' ')[1]}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        // Cambiar plan activo
+        function selectPlan(planId) {
+            activePlanId = planId;
+            renderPlanSelector();
+            renderPlanSummary();
+            renderServices();
+            showToast(`Vista actualizada: ${PLANS[planId].name}`);
+        }
+
+        // Renderizar resumen detallado del plan seleccionado
+        function renderPlanSummary() {
+            const plan = PLANS[activePlanId];
+            const style = ACCENT_STYLES[plan.accent];
+            const container = document.getElementById('planSummaryPanel');
+
+            container.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-4">
+                    <!-- Costo Mensual -->
+                    <div class="bg-slate-950/70 border border-slate-800/90 rounded-xl p-3.5">
+                        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                            <span>Costo Mensual (Chile)</span>
+                            <i data-lucide="wallet" class="w-4 h-4 text-emerald-400"></i>
+                        </div>
+                        <div class="text-base sm:text-lg font-bold text-white">${plan.price}</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">${plan.postPromoPrice}</div>
+                    </div>
+
+                    <!-- Vigencia / Duración -->
+                    <div class="bg-slate-950/70 border border-slate-800/90 rounded-xl p-3.5">
+                        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                            <span>Vigencia del Plan</span>
+                            <i data-lucide="calendar-clock" class="w-4 h-4 text-blue-400"></i>
+                        </div>
+                        <div class="text-base sm:text-lg font-bold text-white">${plan.promoDuration}</div>
+                        <div class="mt-1">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium border ${style.badge}">
+                                ${plan.badge}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Almacenamiento Total -->
+                    <div class="bg-slate-950/70 border border-slate-800/90 rounded-xl p-3.5">
+                        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                            <span>Almacenamiento Nube</span>
+                            <i data-lucide="hard-drive" class="w-4 h-4 text-amber-400"></i>
+                        </div>
+                        <div class="text-base sm:text-lg font-bold text-white">${plan.storage}</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">${plan.storageNote}</div>
+                    </div>
+
+                    <!-- Grupo Familiar -->
+                    <div class="bg-slate-950/70 border border-slate-800/90 rounded-xl p-3.5">
+                        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                            <span>Grupo Familiar</span>
+                            <i data-lucide="users" class="w-4 h-4 text-purple-400"></i>
+                        </div>
+                        <div class="text-sm font-semibold text-white leading-snug mt-0.5">${plan.familyShare}</div>
+                        <div class="text-[11px] text-slate-400 mt-1">Privacidad aislada por cuenta</div>
+                    </div>
+                </div>
+
+                <!-- Lista de Beneficios Extras Incluidos -->
+                <div class="bg-slate-950/50 border border-slate-800/80 rounded-xl p-3.5 sm:p-4">
+                    <div class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-blue-400"></i>
+                        <span>Beneficios extras incluidos en ${plan.name}:</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        ${plan.extras.map(extra => `
+                            <div class="flex items-start gap-2 text-xs text-slate-300">
+                                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.2"></i>
+                                <span>${extra}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        // Renderizar botones de categorías
+        function renderCategoryFilters() {
+            const container = document.getElementById('categoryFilters');
+            container.innerHTML = CATEGORIES.map(cat => {
+                const isActive = activeCategory === cat.id;
+                const count = cat.id === 'all' 
+                    ? SERVICES.length 
+                    : SERVICES.filter(s => s.category === cat.id).length;
+
+                return `
+                    <button 
+                        onclick="setCategory('${cat.id}')"
+                        class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition cursor-pointer border ${
+                            isActive 
+                            ? 'bg-slate-800 text-white border-slate-600 shadow-sm' 
+                            : 'bg-slate-900/60 text-slate-400 border-slate-800/80 hover:bg-slate-900 hover:text-slate-200'
+                        }"
+                    >
+                        <i data-lucide="${cat.icon}" class="w-3.5 h-3.5 ${isActive ? 'text-blue-400' : 'text-slate-500'}"></i>
+                        <span>${cat.label}</span>
+                        <span class="px-1.5 py-0.2 rounded-md text-[10px] ${isActive ? 'bg-slate-700 text-slate-200' : 'bg-slate-800/80 text-slate-500'}">${count}</span>
+                    </button>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        function setCategory(catId) {
+            activeCategory = catId;
+            renderCategoryFilters();
+            renderServices();
+        }
+
+        function clearSearchInput() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.value = '';
+            searchQuery = '';
+            document.getElementById('clearSearch').classList.add('hidden');
+            renderServices();
+            searchInput.focus();
+        }
+
+        function resetFilters() {
+            activeCategory = 'all';
+            clearSearchInput();
+            renderCategoryFilters();
+        }
+
+        // Renderizar tarjetas agrupadas por categoría
+        function renderServices() {
+            const container = document.getElementById('servicesContainer');
+            const emptyState = document.getElementById('emptyState');
+
+            const filtered = SERVICES.filter(service => {
+                const perkText = getPerk(service, activePlanId);
+                const matchesCat = activeCategory === 'all' || service.category === activeCategory;
+                const matchesQuery = !searchQuery || 
+                    service.name.toLowerCase().includes(searchQuery) ||
+                    service.category.toLowerCase().includes(searchQuery) ||
+                    service.description.toLowerCase().includes(searchQuery) ||
+                    service.useCase.toLowerCase().includes(searchQuery) ||
+                    perkText.toLowerCase().includes(searchQuery) ||
+                    service.url.toLowerCase().includes(searchQuery);
+                return matchesCat && matchesQuery;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            // Agrupar resultados por categoría respetando el orden definido
+            const orderedCategories = CATEGORIES.filter(c => c.id !== 'all').map(c => c.id);
+            
+            let html = '';
+
+            orderedCategories.forEach(catName => {
+                const items = filtered.filter(s => s.category === catName);
+                if (items.length === 0) return;
+
+                const style = ACCENT_STYLES[items[0].accent];
+
+                html += `
+                    <section class="space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-2.5 h-2.5 rounded-full ${style.headerDot}"></span>
+                                <h2 class="text-base sm:text-lg font-semibold text-white tracking-tight">${catName}</h2>
+                            </div>
+                            <span class="text-xs text-slate-500 font-mono">${items.length} ${items.length === 1 ? 'herramienta' : 'herramientas'}</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                            ${items.map(service => createCardHTML(service)).join('')}
+                        </div>
+                    </section>
+                `;
+            });
+
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        // Plantilla HTML de cada tarjeta
+        function createCardHTML(service) {
+            const style = ACCENT_STYLES[service.accent];
+            const plan = PLANS[activePlanId];
+            const planStyle = ACCENT_STYLES[plan.accent];
+            const perkDetail = getPerk(service, activePlanId);
+            const cleanUrl = service.url.replace(/^https?:\/\//, '');
+
+            return `
+                <article class="group bg-slate-900/75 hover:bg-slate-900 border border-slate-800/90 hover:border-slate-700 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 card-glow">
+                    <div>
+                        <!-- Cabecera tarjeta -->
+                        <div class="flex items-start justify-between gap-3 mb-3.5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 transition-colors ${style.iconBg}">
+                                    <i data-lucide="${service.icon}" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-white text-base leading-tight group-hover:text-blue-300 transition-colors">
+                                        ${service.name}
+                                    </h3>
+                                    <span class="text-[11px] font-mono text-slate-500 block mt-0.5 truncate max-w-[180px]">
+                                        ${cleanUrl}
+                                    </span>
+                                </div>
+                            </div>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium border shrink-0 ${style.badge}">
+                                ${service.category.split(' ')[0]}
+                            </span>
+                        </div>
+
+                        <!-- Descripción -->
+                        <p class="text-sm text-slate-300 leading-relaxed mb-3">
+                            ${service.description}
+                        </p>
+
+                        <!-- Detalle dinámico según el plan seleccionado -->
+                        <div class="bg-slate-950/85 border border-slate-800 rounded-xl p-3 mb-3">
+                            <div class="flex items-center justify-between gap-2 mb-1.5">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border ${planStyle.badge}">
+                                    <i data-lucide="crown" class="w-3 h-3"></i>
+                                    <span>${plan.shortName}</span>
+                                </span>
+                                <span class="text-[10px] font-mono text-slate-500">Capacidad / Extra</span>
+                            </div>
+                            <p class="text-xs text-slate-200 leading-relaxed">
+                                ${perkDetail}
+                            </p>
+                        </div>
+
+                        <!-- Caso de uso práctico -->
+                        <div class="bg-slate-950/40 border border-slate-800/60 rounded-xl px-3 py-2 mb-4">
+                            <div class="text-[11px] text-slate-400 flex items-start gap-1.5">
+                                <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5"></i>
+                                <span><strong class="text-slate-300 font-medium">Uso ideal:</strong> ${service.useCase}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones de acción -->
+                    <div class="flex items-center gap-2 pt-1">
+                        <a 
+                            href="${service.url}" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            class="flex-1 inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold shadow-sm transition ${style.btn}"
+                        >
+                            <span>${service.isDownload ? 'Descargar aplicación' : 'Abrir servicio'}</span>
+                            <i data-lucide="${service.isDownload ? 'download' : 'external-link'}" class="w-3.5 h-3.5"></i>
+                        </a>
+
+                        <button 
+                            onclick="copyUrl('${service.url}', '${service.name}')" 
+                            title="Copiar enlace al portapapeles"
+                            class="inline-flex items-center justify-center p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700/80 text-slate-300 hover:text-white transition cursor-pointer"
+                        >
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </article>
+            `;
+        }
+
+        // Copiar URL usando fallback seguro para iframes/navegadores
+        function copyUrl(url, name) {
+            const tempInput = document.createElement('textarea');
+            tempInput.value = url;
+            tempInput.style.position = 'fixed';
+            tempInput.style.opacity = '0';
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            try {
+                document.execCommand('copy');
+                showToast(`Enlace de ${name} copiado`);
+            } catch (err) {
+                showToast('No se pudo copiar el enlace');
+            }
+            document.body.removeChild(tempInput);
+        }
+
+        // Mostrar notificación Toast
+        let toastTimeout;
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            toastMsg.textContent = message;
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2600);
+        }
+
+        // Exportar archivo estándar NETSCAPE-Bookmark-file-1 listo para importar en cualquier navegador
+        function exportBookmarks() {
+            const timestamp = Math.floor(Date.now() / 1000);
+            const orderedCategories = CATEGORIES.filter(c => c.id !== 'all').map(c => c.id);
+
+            let bookmarksHTML = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<!-- This is an automatically generated file.
+     It will be read and overwritten.
+     DO NOT EDIT! -->
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+    <DT><H3 ADD_DATE="${timestamp}" LAST_MODIFIED="${timestamp}" PERSONAL_TOOLBAR_FOLDER="true">Ecosistema Microsoft</H3>
+    <DL><p>\n`;
+
+            orderedCategories.forEach(catName => {
+                const items = SERVICES.filter(s => s.category === catName);
+                bookmarksHTML += `        <DT><H3 ADD_DATE="${timestamp}" LAST_MODIFIED="${timestamp}">${catName}</H3>\n        <DL><p>\n`;
+                items.forEach(service => {
+                    bookmarksHTML += `            <DT><A HREF="${service.url}" ADD_DATE="${timestamp}">${service.name} — ${service.useCase}</A>\n`;
+                });
+                bookmarksHTML += `        </DL><p>\n`;
+            });
+
+            bookmarksHTML += `    </DL><p>\n</DL><p>`;
+
+            const blob = new Blob([bookmarksHTML], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'marcadores-ecosistema-microsoft.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast('Archivo de marcadores descargado');
+        }
+    </script>
+</body>
+</html>
